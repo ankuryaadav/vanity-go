@@ -1,0 +1,67 @@
+---
+# Configuration Map for deployment.yaml
+# Edit it to change the configuration of your proxy
+# Don't forget to restart your proxy after changing it
+#
+# Path: examples/kubernetes/deployment.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vanity-go-config
+data:
+  vanity.yaml: |
+    apiVersion: 1
+    proxies:
+    - namespace: example.org
+      entries:
+        repo: https://github.com/user/repo.git
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vanity-go
+  labels:
+    app.kubernetes.io/name: vanity-go
+    app.kubernetes.io/version: '1.0'
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vanity-go
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vanity-go
+    spec:
+      containers:
+      - name: vanity-go
+        image: atomys/vanity-go:1.0
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "10Mi"
+            cpu: "10m"
+          limits:
+            memory: "15Mi"
+            cpu: "20m"
+        ports:
+        - containerPort: 8080
+          name: http
+        volumeMounts:
+        - mountPath: /config/vanity.yaml
+          name: configuration
+          subPath: vanity.yaml
+      volumes:
+      - name: configuration
+        configMap:
+          name: vanity-go-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vanity-go
+spec:
+  selector:
+    app.kubernetes.io/name: vanity-go
+  ports:
+  - port: 8080
+    targetPort: 8080
